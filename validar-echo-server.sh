@@ -1,15 +1,13 @@
 #!/bin/bash
 
-SERVER_CONTAINER_NAME="server"
-CLIENT_CONTAINER_NAME="client1"
-SERVER_PORT=12345
-TEST_MESSAGE="hello_echo"
+SERVER="server"
+PORT=12345
+MESSAGE="echo"
+NETWORK="tp0_testing_net"
 
-# Ejecuta netcat desde client1 hacia server, usando la red interna
-RESPONSE=$(docker exec "$CLIENT_CONTAINER_NAME" sh -c "echo $TEST_MESSAGE | nc $SERVER_CONTAINER_NAME $SERVER_PORT")
+RESPONSE=$(docker run --rm --network "$NETWORK" busybox:latest sh -c "echo ${MESSAGE}| nc ${SERVER} ${PORT}")
 
-# Verifica si el servidor respondió correctamente
-if [ \"$RESPONSE\" = \"$TEST_MESSAGE\" ]; then
+if [ \"$RESPONSE\" = \"$MESSAGE\" ]; then
     echo "action: test_echo_server | result: success"
     exit 0
 else
