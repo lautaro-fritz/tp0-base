@@ -10,7 +10,6 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=INFO
     networks:
       - testing_net
     volumes:
@@ -28,7 +27,6 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID={cliente_id}
-      - CLI_LOG_LEVEL=INFO
     networks:
       - testing_net
     depends_on:
