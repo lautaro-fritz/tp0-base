@@ -15,8 +15,8 @@ services:
       - testing_net
     volumes:
       - type: bind
-      - source: ./server/config.ini
-      - target: /config.ini
+        source: ./server/config.ini
+        target: /config.ini
   
 """
 
@@ -35,8 +35,8 @@ services:
       - server
     volumes:
       - type: bind
-      - source: ./client/config.yaml
-      - target: /config.yaml
+        source: ./client/config.yaml
+        target: /config.yaml
 """
       
         servicios += CLIENTE + '\n'
