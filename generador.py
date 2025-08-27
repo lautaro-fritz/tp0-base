@@ -28,7 +28,7 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID={cliente_id}
-      - CLI_LOG_LEVEL=DEBUG
+      - CLI_LOG_LEVEL=INFO
     networks:
       - testing_net
     depends_on:
