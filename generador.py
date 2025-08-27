@@ -13,6 +13,10 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - type: bind
+      - source: ./server/config.ini
+      - target: /config.ini
   
 """
 
@@ -29,6 +33,10 @@ services:
       - testing_net
     depends_on:
       - server
+    volumes:
+      - type: bind
+      - source: ./client/config.yaml
+      - target: /config.yaml
 """
       
         servicios += CLIENTE + '\n'
