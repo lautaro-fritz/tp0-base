@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"time"
 	"encoding/binary"
+	"strings"
+	"os"
 	
 	"github.com/op/go-logging"
 )
@@ -106,17 +107,15 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
 		
-		apuesta := common.Apuesta{
+		apuesta := Apuesta{
 		Nombre: os.Getenv("NOMBRE"),
 		Apellido:            os.Getenv("APELLIDO"),
 		Documento:            os.Getenv("DOCUMENTO"),
 		Nacimiento:            os.Getenv("NACIMIENTO"),
-		Numero:            os.Getenv("NUMERO")
+		Numero:            os.Getenv("NUMERO"),
 		}
 		
-		msg := apuesta.toString()
-		
-		msgStr := apuesta.ToString()
+		msgStr := apuesta.toString()
 		msgBytes := []byte(msgStr)
 
 		length := uint32(len(msgBytes))
@@ -182,7 +181,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		if strings.TrimSpace(response) == "OK" {
 			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", 0, 1)
 		} else {
-			log.Warnf("action: receive_message | result: unexpected_response | client_id: %v | response: %v", c.config.ID, response)
+			log.Infof("action: receive_message | result: unexpected_response | client_id: %v | response: %v", c.config.ID, response)
 		}
 		
 		
