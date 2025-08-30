@@ -27,6 +27,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID={cliente_id}
+      - NOMBRE=Valentin
+      - APELLIDO=Gomez
+      - DOCUMENTO=30678678
+      - NACIMIENTO=1999-03-17
+      - NUMERO=7574
     networks:
       - testing_net
     depends_on:

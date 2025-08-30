@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"net"
 	"time"
-
+	"encoding/binary"
+	
 	"github.com/op/go-logging"
 )
 
@@ -78,6 +79,18 @@ func readStringWithContext(ctx context.Context, conn net.Conn) (string, error) {
 	}
 }
 
+func writeFull(conn net.Conn, data []byte) error {
+	total := 0
+	for total < len(data) {
+		n, err := conn.Write(data[total:])
+		if err != nil {
+			return err
+		}
+		total += n
+	}
+	return nil
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
 	// There is an autoincremental msgID to identify every message sent
@@ -92,16 +105,47 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
+		
+		apuesta := common.Apuesta{
+		Nombre: os.Getenv("NOMBRE"),
+		Apellido:            os.Getenv("APELLIDO"),
+		Documento:            os.Getenv("DOCUMENTO"),
+		Nacimiento:            os.Getenv("NACIMIENTO"),
+		Numero:            os.Getenv("NUMERO")
+		}
+		
+		msg := apuesta.toString()
+		
+		msgStr := apuesta.ToString()
+		msgBytes := []byte(msgStr)
+
+		length := uint32(len(msgBytes))
+		lengthBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(lengthBytes, length)
+
+		// Send length
+		if err := writeFull(c.conn, lengthBytes); err != nil {
+			log.Errorf("action: send_length | result: fail | error: %v", err)
+			return
+		}
+
+		// Send actual message
+		if err := writeFull(c.conn, msgBytes); err != nil {
+			log.Errorf("action: send_message | result: fail | error: %v", err)
+			return
+		}
+
+		log.Infof("action: send_message | result: success | msg: %s", msgStr)
 
 		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
+		/*fmt.Fprintf(
 			c.conn,
 			"[CLIENT %v] Message N°%v\n",
 			c.config.ID,
 			msgID,
-		)
+		)*/
 		// Handles context cancel, error and successful reads.
-		msg, err := readStringWithContext(ctx, c.conn)
+		/*msg, err := readStringWithContext(ctx, c.conn)
 		c.conn.Close()
 		log.Infof("action: socket_closed | result: success | client_id: %v", c.config.ID)
 
@@ -120,7 +164,28 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 			c.config.ID,
 			msg,
-		)
+		)*/
+		
+		response, err := readStringWithContext(ctx, c.conn)
+		c.conn.Close()
+		log.Infof("action: socket_closed | result: success | client_id: %v", c.config.ID)
+
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				log.Infof("action: receive_message | result: cancelled | client_id: %v", c.config.ID)
+				return
+			}
+			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return
+		}
+
+		if strings.TrimSpace(response) == "OK" {
+			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", 0, 1)
+		} else {
+			log.Warnf("action: receive_message | result: unexpected_response | client_id: %v | response: %v", c.config.ID, response)
+		}
+		
+		
 
 		// Wait a time between sending one message and the next one
 		select {

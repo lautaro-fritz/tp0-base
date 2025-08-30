@@ -15,9 +15,8 @@ class Server:
 
     def __init__(self, port, listen_backlog):
         # Initialize server socket
-        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_socket.bind(('', port))
-        self._server_socket.listen(listen_backlog)
+        self._server_socket = Socket()
+        self._server_socket.bind_and_listen(port, listen_backlog)
         signal.signal(signal.SIGTERM, self._graceful_exit_handler)
         self._is_running = True
 
@@ -47,12 +46,25 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
+            # primero leo la longitud exacta del mensaje del cliente
+            length = client_sock.recv_length()
+            addr = client_sock.getpeername()
+            logging.info(f'action: receive_length | result: success | ip: {addr[0]} | msg: {length}')
+            
+            # luego leo el mensaje con la longitud previamente leida
+            msg = client_sock.recv_msg(length)
             addr = client_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            
+            # tendria que mover esto a una clase BetManager o algo asi
+            values = msg.split('|')
+            bet = Bet(values[0], values[1], values[2], values[3], values[4], values[5])
+            store_bets(bet)
+            logging.info('action: apuesta_almacenada | result: success | dni: ${values[3]} | numero: ${values[5]}.')
             # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            
+            confirmation_msg = "OK"
+            client_sock.send(confirmation_msg)
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
@@ -69,9 +81,9 @@ class Server:
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         try:
-            c, addr = self._server_socket.accept()
+            client_socket, addr = self._server_socket.accept()
             logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
-            return c
+            return client_socket
         except OSError as e:
             logging.debug(f'Server socket closed or error accepting connection: {e}')
             return None
