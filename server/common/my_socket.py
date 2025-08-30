@@ -31,24 +31,24 @@ class Socket:
     	self.socket.close()
     	
     def recv_length(self):
-    	LENGTH = 4
+	    LENGTH = 4
 	    data = b''
 	    while len(data) < LENGTH:
-			chunk = self.socket.recv(LENGTH - len(data))
-			if not chunk:
-				raise ConnectionError("Connection closed unexpectedly")
-			data += chunk
-			
-		length = int.from_bytes(data, 'big')
+		    chunk = self.socket.recv(LENGTH - len(data))
+		    if not chunk:
+			    raise ConnectionError("Connection closed unexpectedly")
+		    data += chunk
+				    
+	    length = int.from_bytes(data, 'big')
 	    return length
 	    
     def recv_msg(self, length):
-	    data = b''
-	    while len(data) < length:
-			chunk = self.socket.recv(length - len(data))
-			if not chunk:
-				raise ConnectionError("Connection closed unexpectedly")
-			data += chunk
-			
-		msg = data.decode('utf-8')
-	    return msg
+        data = b''
+        while len(data) < length:
+            chunk = self.socket.recv(length - len(data))
+            if not chunk:
+                raise ConnectionError("Connection closed unexpectedly")
+                data += chunk
+
+        msg = data.decode('utf-8')
+        return msg

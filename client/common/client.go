@@ -105,7 +105,11 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default:
 		}
 		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+		err := c.createClientSocket()
+		if err != nil {
+			log.Errorf("error when opening connection | result: fail | error: %v", err)
+			return
+		}
 		
 		apuesta := Apuesta{
 		Nombre: os.Getenv("NOMBRE"),
