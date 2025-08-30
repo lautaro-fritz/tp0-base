@@ -1,7 +1,7 @@
 import logging
 import signal
 
-from my_socket import Socket
+from .my_socket import Socket
 
 class Server: 
 
