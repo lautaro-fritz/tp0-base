@@ -4,7 +4,6 @@ import (
 
 )
 
-// ClientConfig Configuration used by the client
 type Apuesta struct {
 	Nombre        string
 	Apellido      string

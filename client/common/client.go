@@ -1,12 +1,9 @@
 package common
 
 import (
-	"bufio"
 	"context"
 	"errors"
-	"net"
 	"time"
-	"encoding/binary"
 	"strings"
 	"os"
 	
@@ -26,7 +23,7 @@ type ClientConfig struct {
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	conn   net.Conn
+	//conn   net.Conn
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -41,7 +38,7 @@ func NewClient(config ClientConfig) *Client {
 // CreateClientSocket Initializes client socket. In case of
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
-func (c *Client) createClientSocket() error {
+/*func (c *Client) createClientSocket() error {
 	conn, err := net.Dial("tcp", c.config.ServerAddress)
 	if err != nil {
 		log.Criticalf(
@@ -53,9 +50,9 @@ func (c *Client) createClientSocket() error {
 	}
 	c.conn = conn
 	return nil
-}
+}*/
 
-func readStringWithContext(ctx context.Context, conn net.Conn) (string, error) {
+/*func readStringWithContext(ctx context.Context, conn net.Conn) (string, error) {
 	readCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 
@@ -78,9 +75,9 @@ func readStringWithContext(ctx context.Context, conn net.Conn) (string, error) {
 	case msg := <-readCh:
 		return msg, nil
 	}
-}
+}*/
 
-func writeFull(conn net.Conn, data []byte) error {
+/*func writeFull(conn net.Conn, data []byte) error {
 	total := 0
 	for total < len(data) {
 		n, err := conn.Write(data[total:])
@@ -90,7 +87,7 @@ func writeFull(conn net.Conn, data []byte) error {
 		total += n
 	}
 	return nil
-}
+}*/
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
@@ -105,11 +102,19 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default:
 		}
 		// Create the connection the server in every loop iteration. Send an
-		err := c.createClientSocket()
-		if err != nil {
-			log.Errorf("error when opening connection | result: fail | error: %v", err)
-			return
-		}
+		//err := c.createClientSocket()
+		//if err != nil {
+			//log.Errorf("error when opening connection | result: fail | error: %v", err)
+			//return
+		//}
+		
+		socket := NewSocket()
+        err := socket.Connect(c.config.ServerAddress)
+        if err != nil {
+	        log.Errorf("error when opening connection | result: fail | error: %v", err)
+	        return
+        }
+
 		
 		apuesta := Apuesta{
 		Nombre: os.Getenv("NOMBRE"),
@@ -120,59 +125,35 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 		
 		msgStr := c.config.ID + "/" + apuesta.toString()
-		msgBytes := []byte(msgStr)
+		//msgBytes := []byte(msgStr)
 
-		length := uint32(len(msgBytes))
-		lengthBytes := make([]byte, 4)
-		binary.BigEndian.PutUint32(lengthBytes, length)
+		//length := uint32(len(msgBytes))
+		//lengthBytes := make([]byte, 4)
+		//binary.BigEndian.PutUint32(lengthBytes, length)
 
 		// Send length
-		if err := writeFull(c.conn, lengthBytes); err != nil {
-			log.Errorf("action: send_length | result: fail | error: %v", err)
-			return
-		}
-		
-		log.Infof("action: send_length | result: success | msg: %v", length)
+		//if err := writeFull(c.conn, lengthBytes); err != nil {
+			//log.Errorf("action: send_length | result: fail | error: %v", err)
+			//return
+		//}
 
 		// Send actual message
-		if err := writeFull(c.conn, msgBytes); err != nil {
-			log.Errorf("action: send_message | result: fail | error: %v", err)
-			return
-		}
+		//if err := writeFull(c.conn, msgBytes); err != nil {
+			//log.Errorf("action: send_message | result: fail | error: %v", err)
+			//return
+		//}
+		
+		if err := socket.Send(msgStr); err != nil {
+	        log.Errorf("action: send_message | result: fail | error: %v", err)
+	        return
+        }
 
 		log.Infof("action: send_message | result: success | msg: %s", msgStr)
-
-		// TODO: Modify the send to avoid short-write
-		/*fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)*/
-		// Handles context cancel, error and successful reads.
-		/*msg, err := readStringWithContext(ctx, c.conn)
-		c.conn.Close()
-		log.Infof("action: socket_closed | result: success | client_id: %v", c.config.ID)
-
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				log.Infof("action: receive_message | result: cancelled | client_id: %v", c.config.ID)
-				return
-			}
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)*/
 		
-		response, err := readStringWithContext(ctx, c.conn)
-		c.conn.Close()
+		//response, err := readStringWithContext(ctx, c.conn)
+		response, err := socket.ReadResponse(ctx)
+		//c.conn.Close()
+		socket.Close()
 		log.Infof("action: socket_closed | result: success | client_id: %v", c.config.ID)
 
 		if err != nil {
