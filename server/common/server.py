@@ -2,6 +2,7 @@ import logging
 import signal
 
 from .my_socket import Socket
+from .utils import Bet, store_bets
 
 class Server: 
 
@@ -59,9 +60,9 @@ class Server:
             
             # tendria que mover esto a una clase BetManager o algo asi
             values = msg.split('/')
-            bet = Bet(values[0], values[1], values[2], values[3], values[4])
-            store_bets(bet)
-            logging.info('action: apuesta_almacenada | result: success | dni: ${values[2]} | numero: ${values[4]}.')
+            bet = Bet(values[0], values[1], values[2], values[3], values[4], values[5])
+            store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {values[3]} | numero: {values[5]}.')
             # TODO: Modify the send to avoid short-writes
             
             confirmation_msg = "OK"

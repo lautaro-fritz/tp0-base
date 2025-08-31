@@ -119,7 +119,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		Numero:            os.Getenv("NUMERO"),
 		}
 		
-		msgStr := apuesta.toString()
+		msgStr := c.config.ID + "/" + apuesta.toString()
 		msgBytes := []byte(msgStr)
 
 		length := uint32(len(msgBytes))
