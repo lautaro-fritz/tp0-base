@@ -185,7 +185,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 
 		if strings.TrimSpace(response) == "OK" {
-			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", 0, 1)
+			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", apuesta.Documento, apuesta.Numero)
 		} else {
 			log.Infof("action: receive_message | result: unexpected_response | client_id: %v | response: %v", c.config.ID, response)
 		}
