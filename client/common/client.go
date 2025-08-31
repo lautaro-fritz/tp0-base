@@ -1,11 +1,13 @@
 package common
 
 import (
+	"bufio"
 	"context"
+	"encoding/csv"
 	"errors"
-	"time"
-	"strings"
 	"os"
+	"strings"
+	"time"
 	
 	"github.com/op/go-logging"
 )
@@ -18,12 +20,12 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopAmount    int
 	LoopPeriod    time.Duration
+	BatchMaxAmount      int
 }
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	//conn   net.Conn
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -37,8 +39,18 @@ func NewClient(config ClientConfig) *Client {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
+	file, err := os.Open("/agency.csv")
+	if err != nil {
+		log.Fatalf("action: open_csv | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return
+	}
+	defer file.Close()
+	
+	reader := csv.NewReader(bufio.NewReader(file))
+
+	const maxBytes = 8192
+	batchNumber := 1
+	
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
 		select {
 		case <-ctx.Done():
@@ -48,57 +60,83 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default:
 		}
 		
-		// Create the connection the server in every loop iteration. Send an	
-		socket := NewSocket()
-        err := socket.Connect(c.config.ServerAddress)
-        if err != nil {
-	        log.Errorf("error when opening connection | result: fail | error: %v", err)
-	        return
-        }
+		var sb strings.Builder
+		sb.WriteString(c.config.ID) // Start message with client ID
 
-		
-		apuesta := Apuesta{
-		Nombre: os.Getenv("NOMBRE"),
-		Apellido:            os.Getenv("APELLIDO"),
-		Documento:            os.Getenv("DOCUMENTO"),
-		Nacimiento:            os.Getenv("NACIMIENTO"),
-		Numero:            os.Getenv("NUMERO"),
-		}
-		
-		msgStr := c.config.ID + "/" + apuesta.toString()
-		
-		if err := socket.Send(msgStr); err != nil {
-	        log.Errorf("action: send_message | result: fail | error: %v", err)
-	        return
-        }
+		batch := make([]Apuesta, 0, c.config.BatchMaxAmount)
 
-		log.Infof("action: send_message | result: success | msg: %s", msgStr)
-		
-		response, err := socket.ReadResponse(ctx)
-		socket.Close()
-		log.Infof("action: socket_closed | result: success | client_id: %v", c.config.ID)
-
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				log.Infof("action: receive_message | result: cancelled | client_id: %v", c.config.ID)
-				return
+		for len(batch) < c.config.BatchMaxAmount {
+			record, err := reader.Read()
+			if err != nil {
+				if errors.Is(err, os.ErrClosed) || strings.Contains(err.Error(), "EOF") {
+					break
+				}
+				log.Warningf("action: read_csv_row | result: fail | client_id: %v | error: %v", c.config.ID, err)
+				break
 			}
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
+
+			apuesta := Apuesta{
+				Nombre:     record[0],
+				Apellido:   record[1],
+				Documento:  record[2],
+				Nacimiento: record[3],
+				Numero:     record[4],
+			}
+
+			apuestaStr := "#" + apuesta.toString()
+			if sb.Len()+len(apuestaStr) > maxBytes {
+				// Reached max size for this batch, stop adding apuestas
+				break
+			}
+
+			sb.WriteString(apuestaStr)
+			batch = append(batch, apuesta)
+		}
+
+		if len(batch) == 0 {
+			// No more apuestas to send
+			log.Infof("esta entrando aca")
+			break
+		}
+
+		socket := NewSocket()
+		err = socket.Connect(c.config.ServerAddress)
+		if err != nil {
+			log.Errorf("action: open_connection | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
 
-		if strings.TrimSpace(response) == "OK" {
-			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", apuesta.Documento, apuesta.Numero)
-		} else {
-			log.Infof("action: receive_message | result: unexpected_response | client_id: %v | response: %v", c.config.ID, response)
-		}
-		
-		
+		msg := sb.String()
 
-		// Wait a time between sending one message and the next one
+		err = socket.Send(msg)
+		if err != nil {
+			log.Errorf("action: send_batch | result: fail | batch_number: %d | client_id: %v | error: %v", batchNumber, c.config.ID, err)
+			socket.Close()
+			return
+		}
+
+		log.Infof("action: send_batch | result: success | batch_number: %d | client_id: %v | cantidad: %d | size_bytes: %d",
+			batchNumber, c.config.ID, len(batch), len(msg))
+
+		response, err := socket.ReadResponse(ctx)
+		socket.Close()
+
+		if err != nil {
+			log.Errorf("action: read_response | result: fail | batch_number: %d | client_id: %v | error: %v", batchNumber, c.config.ID, err)
+			return
+		}
+
+		trimmedResp := strings.TrimSpace(response)
+		if trimmedResp == "OK" {
+			log.Infof("action: apuesta_enviada | result: success | cantidad: %d", len(batch))
+		} else {
+			log.Infof("action: apuesta_enviada | result: fail | cantidad: %d | response: %s", len(batch), trimmedResp)
+		}
+
+		batchNumber++
+
 		select {
 		case <-ctx.Done():
-			// If context is cancelled, stop the sleep
 			log.Infof("action: loop_cancelled_during_sleep | result: success | client_id: %v", c.config.ID)
 			return
 		case <-time.After(c.config.LoopPeriod):

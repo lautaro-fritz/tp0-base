@@ -48,27 +48,49 @@ class Server:
         client socket will also be closed
         """
         try:
-            # primero leo la longitud exacta del mensaje del cliente
             length = client_sock.recv_length()
             addr = client_sock.getpeername()
             logging.info(f'action: receive_length | result: success | ip: {addr[0]} | msg: {length}')
             
-            # luego leo el mensaje con la longitud previamente leida
             msg = client_sock.recv_msg(length)
-            addr = client_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
-            # tendria que mover esto a una clase BetManager o algo asi
-            values = msg.split('/')
-            bet = Bet(values[0], values[1], values[2], values[3], values[4], values[5])
-            store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {values[3]} | numero: {values[5]}.')
-            # TODO: Modify the send to avoid short-writes
+            # Message format: clientID#apuesta1#apuesta2#apuesta3...
+            parts = msg.split('#')
             
-            confirmation_msg = "OK"
-            client_sock.send(confirmation_msg)
+            if len(parts) < 2:
+                # No apuestas sent
+                logging.error(f'action: apuesta_recibida | result: fail | cantidad: 0 | reason: no_apuestas_received')
+                client_sock.send("ERROR")
+                return
+            
+            client_id = parts[0]
+            apuestas_raw = parts[1:]  # skip client ID
+            
+            bets = []
+            for apuesta_str in apuestas_raw:
+                fields = apuesta_str.split('/')
+                if len(fields) != 5:
+                    logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(apuestas_raw)} | reason: malformed_apuesta')
+                    client_sock.send("ERROR")
+                    return
+                
+                bet = Bet(client_id, fields[0], fields[1], fields[2], fields[3], fields[4])
+                bets.append(bet)
+            
+            # Store all bets at once
+            try:
+                store_bets(bets)
+            except Exception as e:
+                logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)} | error: {e}')
+                client_sock.send("ERROR")
+                return
+            
+            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+            client_sock.send("OK")
+        
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
             client_sock.close()
 
