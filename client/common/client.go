@@ -131,6 +131,8 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			log.Errorf("action: send_length | result: fail | error: %v", err)
 			return
 		}
+		
+		log.Infof("action: send_length | result: success | msg: %v", length)
 
 		// Send actual message
 		if err := writeFull(c.conn, msgBytes); err != nil {

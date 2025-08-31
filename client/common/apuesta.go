@@ -14,9 +14,9 @@ type Apuesta struct {
 }
 
 func (a Apuesta) toString() string {
-	return a.Nombre + "|" +
-		a.Apellido + "|" +
-		a.Documento + "|" +
-		a.Nacimiento + "|" +
+	return a.Nombre + "/" +
+		a.Apellido + "/" +
+		a.Documento + "/" +
+		a.Nacimiento + "/" +
 		a.Numero
 }

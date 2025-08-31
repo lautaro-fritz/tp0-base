@@ -58,10 +58,10 @@ class Server:
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
             # tendria que mover esto a una clase BetManager o algo asi
-            values = msg.split('|')
-            bet = Bet(values[0], values[1], values[2], values[3], values[4], values[5])
+            values = msg.split('/')
+            bet = Bet(values[0], values[1], values[2], values[3], values[4])
             store_bets(bet)
-            logging.info('action: apuesta_almacenada | result: success | dni: ${values[3]} | numero: ${values[5]}.')
+            logging.info('action: apuesta_almacenada | result: success | dni: ${values[2]} | numero: ${values[4]}.')
             # TODO: Modify the send to avoid short-writes
             
             confirmation_msg = "OK"
