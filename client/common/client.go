@@ -35,60 +35,6 @@ func NewClient(config ClientConfig) *Client {
 	return client
 }
 
-// CreateClientSocket Initializes client socket. In case of
-// failure, error is printed in stdout/stderr and exit 1
-// is returned
-/*func (c *Client) createClientSocket() error {
-	conn, err := net.Dial("tcp", c.config.ServerAddress)
-	if err != nil {
-		log.Criticalf(
-			"action: connect | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
-		return err
-	}
-	c.conn = conn
-	return nil
-}*/
-
-/*func readStringWithContext(ctx context.Context, conn net.Conn) (string, error) {
-	readCh := make(chan string, 1)
-	errCh := make(chan error, 1)
-
-	// Runs concurrently
-	go func() {
-		msg, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			errCh <- err
-			return
-		}
-		readCh <- msg
-	}()
-
-	select {
-	case <-ctx.Done():
-		// If context is cancelled, stops reading the buffer
-		return "", ctx.Err()
-	case err := <-errCh:
-		return "", err
-	case msg := <-readCh:
-		return msg, nil
-	}
-}*/
-
-/*func writeFull(conn net.Conn, data []byte) error {
-	total := 0
-	for total < len(data) {
-		n, err := conn.Write(data[total:])
-		if err != nil {
-			return err
-		}
-		total += n
-	}
-	return nil
-}*/
-
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
 	// There is an autoincremental msgID to identify every message sent
@@ -101,13 +47,8 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			return
 		default:
 		}
-		// Create the connection the server in every loop iteration. Send an
-		//err := c.createClientSocket()
-		//if err != nil {
-			//log.Errorf("error when opening connection | result: fail | error: %v", err)
-			//return
-		//}
 		
+		// Create the connection the server in every loop iteration. Send an	
 		socket := NewSocket()
         err := socket.Connect(c.config.ServerAddress)
         if err != nil {
@@ -125,23 +66,6 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 		
 		msgStr := c.config.ID + "/" + apuesta.toString()
-		//msgBytes := []byte(msgStr)
-
-		//length := uint32(len(msgBytes))
-		//lengthBytes := make([]byte, 4)
-		//binary.BigEndian.PutUint32(lengthBytes, length)
-
-		// Send length
-		//if err := writeFull(c.conn, lengthBytes); err != nil {
-			//log.Errorf("action: send_length | result: fail | error: %v", err)
-			//return
-		//}
-
-		// Send actual message
-		//if err := writeFull(c.conn, msgBytes); err != nil {
-			//log.Errorf("action: send_message | result: fail | error: %v", err)
-			//return
-		//}
 		
 		if err := socket.Send(msgStr); err != nil {
 	        log.Errorf("action: send_message | result: fail | error: %v", err)
@@ -150,9 +74,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 		log.Infof("action: send_message | result: success | msg: %s", msgStr)
 		
-		//response, err := readStringWithContext(ctx, c.conn)
 		response, err := socket.ReadResponse(ctx)
-		//c.conn.Close()
 		socket.Close()
 		log.Infof("action: socket_closed | result: success | client_id: %v", c.config.ID)
 

@@ -24,7 +24,7 @@ func (s *Socket) Connect(address string) error {
 	return nil
 }
 
-func (s *Socket) writeFull(data []byte) error {
+func (s *Socket) sendAll(data []byte) error {
 	total := 0
 	for total < len(data) {
 		n, err := s.conn.Write(data[total:])
@@ -44,10 +44,10 @@ func (s *Socket) Send(msg string) error {
 	lengthBytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(lengthBytes, length)
 
-	if err := s.writeFull(lengthBytes); err != nil {
+	if err := s.sendAll(lengthBytes); err != nil {
 		return err
 	}
-	if err := s.writeFull(msgBytes); err != nil {
+	if err := s.sendAll(msgBytes); err != nil {
 		return err
 	}
 	return nil
