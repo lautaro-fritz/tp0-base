@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/csv"
-	"errors"
 	"os"
 	"strings"
 	"time"
@@ -60,7 +59,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default:
 		}
 		
-		var sb strings.Builder
+		/*var sb strings.Builder
 		sb.WriteString(c.config.ID) // Start message with client ID
 
 		batch := make([]Apuesta, 0, c.config.BatchMaxAmount)
@@ -91,9 +90,22 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 			sb.WriteString(apuestaStr)
 			batch = append(batch, apuesta)
+		}*/
+		
+		batch := &Batch{
+		    Reader:        reader,
+		    MaxBatchSize:  c.config.BatchMaxAmount,
+		    MaxMessageLen: 8192,
+		    ClientID:      c.config.ID,
+	    }
+	    
+	    bets, msg, err := batch.NextBatch()
+		if err != nil {
+			log.Warningf("action: build_batch | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			break
 		}
 
-		if len(batch) == 0 {
+		if len(bets) == 0 {
 			// No more apuestas to send
 			log.Infof("esta entrando aca")
 			break
@@ -106,7 +118,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			return
 		}
 
-		msg := sb.String()
+		//msg := sb.String()
 
 		err = socket.Send(msg)
 		if err != nil {
@@ -116,7 +128,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 
 		log.Infof("action: send_batch | result: success | batch_number: %d | client_id: %v | cantidad: %d | size_bytes: %d",
-			batchNumber, c.config.ID, len(batch), len(msg))
+			batchNumber, c.config.ID, len(bets), len(msg))
 
 		response, err := socket.ReadResponse(ctx)
 		socket.Close()
@@ -128,9 +140,9 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 		trimmedResp := strings.TrimSpace(response)
 		if trimmedResp == "OK" {
-			log.Infof("action: apuesta_enviada | result: success | cantidad: %d", len(batch))
+			log.Infof("action: apuesta_enviada | result: success | cantidad: %d", len(bets))
 		} else {
-			log.Infof("action: apuesta_enviada | result: fail | cantidad: %d | response: %s", len(batch), trimmedResp)
+			log.Infof("action: apuesta_enviada | result: fail | cantidad: %d | response: %s", len(bets), trimmedResp)
 		}
 
 		batchNumber++
