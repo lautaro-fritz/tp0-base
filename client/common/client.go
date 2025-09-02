@@ -187,14 +187,13 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 	    if err != nil {
 		    log.Errorf("action: read_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
-		    //socket.Close()??
 		    return
 	    }
 
 	    trimmedResp := strings.TrimSpace(response)
 	    log.Infof("%v", trimmedResp)
 	    if trimmedResp == "ERROR" {
-		    log.Infof("action: get_winners | response: %s", trimmedResp)
+		    log.Infof("action: get_winners | result: success | response: %s", trimmedResp)
 		    time.Sleep(3 * time.Second)
 	    } else {
 		    winners := strings.Split(trimmedResp, "#")
