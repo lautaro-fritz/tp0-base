@@ -46,9 +46,11 @@ def main():
     # of the component
     logging.debug(f"action: config | result: success | port: {port} | "
                   f"listen_backlog: {listen_backlog} | logging_level: {logging_level}")
+                  
+    clients_amount = int(os.getenv('CLIENTS_AMOUNT'))
 
     # Initialize server and start server loop
-    server = Server(port, listen_backlog)
+    server = Server(port, listen_backlog, clients_amount)
     server.run()
 
 def initialize_log(logging_level):

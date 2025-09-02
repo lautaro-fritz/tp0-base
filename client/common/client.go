@@ -157,7 +157,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		log.Infof("action: done_enviado | result: fail | response: %s", trimmedResp)
 	}
 	
-	msg, err := protocol.formatMessage(WinnersMessage)
+	getWinnersMsg, err := protocol.formatMessage(WinnersMessage)
 	
 	for {
 	
@@ -175,7 +175,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		    return
 	    }
 	    
-	    err = socket.Send(msg)
+	    err = socket.Send(getWinnersMsg)
 		    
 	    if err != nil {
 		    log.Errorf("action: send_get_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
@@ -197,9 +197,8 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		    log.Infof("action: get_winners | result: fail | response: %s", trimmedResp)
 		    time.Sleep(3 * time.Second)
 	    } else {
-		    log.Infof("action: get_winners | result: success")
 		    winners := strings.Split(trimmedResp, "#")
-		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: {len(winners)}")
+		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
 		    break
 	    }
 	}

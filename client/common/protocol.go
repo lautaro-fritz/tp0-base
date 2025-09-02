@@ -21,7 +21,7 @@ func (p *Protocol) formatMessage(messageType MessageType) (string, error) {
 	
 	switch messageType {
 	case BetsMessage:
-	    sb.WriteString("#" + 'B')
+	    sb.WriteString("#" + "B")
 	    batch := make([]Apuesta, 0, p.MaxBatchSize)
 
 	    for len(batch) < p.MaxBatchSize {
@@ -31,7 +31,7 @@ func (p *Protocol) formatMessage(messageType MessageType) (string, error) {
 				    // No more records
 				    return sb.String(), nil
 			    }
-			    return nil, "", fmt.Errorf("read_csv_row: %w", err)
+			    return "", fmt.Errorf("read_csv_row: %w", err)
 		    }
 
 		    apuesta := Apuesta{
@@ -51,10 +51,10 @@ func (p *Protocol) formatMessage(messageType MessageType) (string, error) {
 		    batch = append(batch, apuesta)
 	    }
 	case DoneMessage:
-	    sb.WriteString("#" + 'D')
+	    sb.WriteString("#" + "D")
 	
 	case WinnersMessage:
-	    sb.WriteString("#" + 'W')
+	    sb.WriteString("#" + "W")
 	    
 	default:
 	} 
