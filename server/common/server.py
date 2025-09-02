@@ -15,11 +15,13 @@ class Server:
         except Exception as e:
             logging.error(f"Error closing server socket: {e}")
 
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, clients_amount):
         # Initialize server socket
         self._server_socket = Socket()
         self._server_socket.bind_and_listen(port, listen_backlog)
         signal.signal(signal.SIGTERM, self._graceful_exit_handler)
+        self.registered_agencies = [False] * clients_amount
+        self.winners = []
         self._is_running = True
 
     def run(self):
@@ -55,33 +57,61 @@ class Server:
             parts = msg.split('#')
             
             if len(parts) < 2:
-                logging.error(f'action: apuesta_recibida | result: fail | cantidad: 0 | reason: no_bets_received')
+                logging.error(f'action: mensaje_recibido | result: fail | reason: no op code')
                 client_sock.send("ERROR")
                 return
             
-            client_id = parts[0]
-            bets_raw = parts[1:]
+            # solo puede haber mas de dos campos del mensaje si es el mensaje de apuestas
+            if len(parts) > 2:
+                client_id = parts[0]
+                bets_raw = parts[2:]
+                
+                bets = []
+                for bet_str in bets_raw:
+                    fields = bet_str.split('/')
+                    if len(fields) != 5:
+                        logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets_raw)} | reason: malformed_bet')
+                        client_sock.send("ERROR")
+                        return
+                    
+                    bet = Bet(client_id, fields[0], fields[1], fields[2], fields[3], fields[4])
+                    bets.append(bet)
             
-            bets = []
-            for bet_str in bets_raw:
-                fields = bet_str.split('/')
-                if len(fields) != 5:
-                    logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets_raw)} | reason: malformed_bet')
+                try:
+                    store_bets(bets)
+                except Exception as e:
+                    logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)} | error: {e}')
                     client_sock.send("ERROR")
                     return
                 
-                bet = Bet(client_id, fields[0], fields[1], fields[2], fields[3], fields[4])
-                bets.append(bet)
+                logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+                client_sock.send("OK")
             
-            try:
-                store_bets(bets)
-            except Exception as e:
-                logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)} | error: {e}')
-                client_sock.send("ERROR")
-                return
+            # si solo hay dos campos del mensaje puede ser la notificacion de que termino o la consulta de ganadores    
+            if len(parts) == 2:
+                if parts[1] == "D":
+                    logging.info(f'action: done_recibido | result: success')
+                    self.registered_agencies[parts[0] - 1] = True
+                    client_sock.send("OK")
+                    
+                if parts[1] == "W":
+                    logging.info(f'action: done_recibido | result: success')
+                    if self.registered_agencies.count(False) >= 1:
+                        client_sock.send("ERROR")
+                        
+                    agency_winners = [winner for winner in self.winners if winner.agency == parts[0]]
+                    documents_str = "#".join(w.document for w in agency_winners)
+                    
+                    client_sock.send(documents_str)
+                    
             
-            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
-            client_sock.send("OK")
+            if all(a is True for a in self.registered_agencies):
+                logging.info(f'action: sorteo | result: success')
+                bets = load_bets()
+                for bet in bets:
+                    if has_won(bet):
+                        self.winners.append(bet)
+                
         
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")

@@ -50,7 +50,17 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 	const maxBytes = 8192
 	batchNumber := 1
 	
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+	protocol := &Protocol{
+	    Reader:        reader,
+	    MaxBatchSize:  c.config.BatchMaxAmount,
+	    MaxMessageLen: maxBytes,
+	    ClientID:      c.config.ID,
+	}
+	
+	socket := NewSocket()
+	
+	//podria ser un for solo y que salga cuando no hay mas bets
+	for {
 		select {
 		case <-ctx.Done():
 			// If context is cancelled, stop the loop
@@ -58,27 +68,19 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			return
 		default:
 		}
-		
-		batch := &Batch{
-		    Reader:        reader,
-		    MaxBatchSize:  c.config.BatchMaxAmount,
-		    MaxMessageLen: maxBytes,
-		    ClientID:      c.config.ID,
-	    }
 	    
-	    bets, msg, err := batch.NextBatch()
+	    msg, err := protocol.formatMessage(BetsMessage)
 		if err != nil {
 			log.Warningf("action: build_batch | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			break
 		}
 
-		if len(bets) == 0 {
+		if len(msg) == 0 {
 			// No more apuestas to send
-			log.Infof("esta entrando aca")
+			log.Infof("todas las apuestas enviadas")
 			break
 		}
 
-		socket := NewSocket()
 		err = socket.Connect(c.config.ServerAddress)
 		if err != nil {
 			log.Errorf("action: open_connection | result: fail | client_id: %v | error: %v", c.config.ID, err)
@@ -86,14 +88,15 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 
 		err = socket.Send(msg)
+		
 		if err != nil {
 			log.Errorf("action: send_batch | result: fail | batch_number: %d | client_id: %v | error: %v", batchNumber, c.config.ID, err)
 			socket.Close()
 			return
 		}
 
-		log.Infof("action: send_batch | result: success | batch_number: %d | client_id: %v | cantidad: %d | size_bytes: %d",
-			batchNumber, c.config.ID, len(bets), len(msg))
+		log.Infof("action: send_batch | result: success | batch_number: %d | client_id: %v | size_bytes: %d",
+			batchNumber, c.config.ID, len(msg))
 
 		response, err := socket.ReadResponse(ctx)
 		socket.Close()
@@ -105,9 +108,9 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 		trimmedResp := strings.TrimSpace(response)
 		if trimmedResp == "OK" {
-			log.Infof("action: apuesta_enviada | result: success | cantidad: %d", len(bets))
+			log.Infof("action: apuesta_enviada | result: success")
 		} else {
-			log.Infof("action: apuesta_enviada | result: fail | cantidad: %d | response: %s", len(bets), trimmedResp)
+			log.Infof("action: apuesta_enviada | result: fail | response: %s", trimmedResp)
 		}
 
 		batchNumber++
@@ -119,5 +122,86 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		case <-time.After(c.config.LoopPeriod):
 		}
 	}
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	
+	log.Infof("action: all_bets_sent | result: success | client_id: %v", c.config.ID)
+	
+    msg, err := protocol.formatMessage(DoneMessage)
+    
+    err = socket.Connect(c.config.ServerAddress)
+	if err != nil {
+		log.Errorf("action: open_connection | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return
+	}
+	
+	err = socket.Send(msg)
+		
+	if err != nil {
+		log.Errorf("action: send_done | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		socket.Close()
+		return
+	}
+	
+	response, err := socket.ReadResponse(ctx)
+	socket.Close()
+
+	if err != nil {
+		log.Errorf("action: read_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		//socket.Close()??
+		return
+	}
+
+	trimmedResp := strings.TrimSpace(response)
+	if trimmedResp == "OK" {
+		log.Infof("action: done_enviado | result: success")
+	} else {
+		log.Infof("action: done_enviado | result: fail | response: %s", trimmedResp)
+	}
+	
+	msg, err := protocol.formatMessage(WinnersMessage)
+	
+	for {
+	
+	    select {
+		case <-ctx.Done():
+			// If context is cancelled, stop the loop
+			log.Infof("action: loop_cancelled | result: success | client_id: %v", c.config.ID)
+			return
+		default:
+		}
+	
+        err = socket.Connect(c.config.ServerAddress)
+	    if err != nil {
+		    log.Errorf("action: open_connection | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		    return
+	    }
+	    
+	    err = socket.Send(msg)
+		    
+	    if err != nil {
+		    log.Errorf("action: send_get_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		    socket.Close()
+		    return
+	    }
+	    
+	    response, err := socket.ReadResponse(ctx)
+	    socket.Close()
+
+	    if err != nil {
+		    log.Errorf("action: read_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		    //socket.Close()??
+		    return
+	    }
+
+	    trimmedResp := strings.TrimSpace(response)
+	    if trimmedResp == "ERROR" {
+		    log.Infof("action: get_winners | result: fail | response: %s", trimmedResp)
+		    time.Sleep(3 * time.Second)
+	    } else {
+		    log.Infof("action: get_winners | result: success")
+		    winners := strings.Split(trimmedResp, "#")
+		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: {len(winners)}")
+		    break
+	    }
+	}
+    
 }

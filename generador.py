@@ -2,7 +2,7 @@ import sys
 
 def generar_docker_compose(nombre_archivo, cantidad_clientes):
 
-    servicios = """name: tp0
+    servicios = f"""name: tp0
 services:
   server:
     container_name: server
@@ -10,6 +10,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - CLIENTS_AMOUNT={cantidad_clientes}
     networks:
       - testing_net
     volumes:
