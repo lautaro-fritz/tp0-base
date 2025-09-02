@@ -71,7 +71,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 	    
 	    msg, err := protocol.formatMessage(BetsMessage)
 		if err != nil {
-			log.Warningf("action: build_batch | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			log.Warningf("action: exit file | result: success | client_id: %v | error: %v", c.config.ID, err)
 			break
 		}
 
