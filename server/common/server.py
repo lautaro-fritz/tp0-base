@@ -30,9 +30,6 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
         while self._is_running:
             client_sock = self.__accept_new_connection()
             if client_sock:
@@ -55,30 +52,27 @@ class Server:
             msg = client_sock.recv_msg(length)
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
-            # Message format: clientID#apuesta1#apuesta2#apuesta3...
             parts = msg.split('#')
             
             if len(parts) < 2:
-                # No apuestas sent
-                logging.error(f'action: apuesta_recibida | result: fail | cantidad: 0 | reason: no_apuestas_received')
+                logging.error(f'action: apuesta_recibida | result: fail | cantidad: 0 | reason: no_bets_received')
                 client_sock.send("ERROR")
                 return
             
             client_id = parts[0]
-            apuestas_raw = parts[1:]  # skip client ID
+            bets_raw = parts[1:]
             
             bets = []
-            for apuesta_str in apuestas_raw:
-                fields = apuesta_str.split('/')
+            for bet_str in bets_raw:
+                fields = bet_str.split('/')
                 if len(fields) != 5:
-                    logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(apuestas_raw)} | reason: malformed_apuesta')
+                    logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets_raw)} | reason: malformed_bet')
                     client_sock.send("ERROR")
                     return
                 
                 bet = Bet(client_id, fields[0], fields[1], fields[2], fields[3], fields[4])
                 bets.append(bet)
             
-            # Store all bets at once
             try:
                 store_bets(bets)
             except Exception as e:

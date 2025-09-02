@@ -59,43 +59,10 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default:
 		}
 		
-		/*var sb strings.Builder
-		sb.WriteString(c.config.ID) // Start message with client ID
-
-		batch := make([]Apuesta, 0, c.config.BatchMaxAmount)
-
-		for len(batch) < c.config.BatchMaxAmount {
-			record, err := reader.Read()
-			if err != nil {
-				if errors.Is(err, os.ErrClosed) || strings.Contains(err.Error(), "EOF") {
-					break
-				}
-				log.Warningf("action: read_csv_row | result: fail | client_id: %v | error: %v", c.config.ID, err)
-				break
-			}
-
-			apuesta := Apuesta{
-				Nombre:     record[0],
-				Apellido:   record[1],
-				Documento:  record[2],
-				Nacimiento: record[3],
-				Numero:     record[4],
-			}
-
-			apuestaStr := "#" + apuesta.toString()
-			if sb.Len()+len(apuestaStr) > maxBytes {
-				// Reached max size for this batch, stop adding apuestas
-				break
-			}
-
-			sb.WriteString(apuestaStr)
-			batch = append(batch, apuesta)
-		}*/
-		
 		batch := &Batch{
 		    Reader:        reader,
 		    MaxBatchSize:  c.config.BatchMaxAmount,
-		    MaxMessageLen: 8192,
+		    MaxMessageLen: maxBytes,
 		    ClientID:      c.config.ID,
 	    }
 	    
@@ -117,8 +84,6 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			log.Errorf("action: open_connection | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
-
-		//msg := sb.String()
 
 		err = socket.Send(msg)
 		if err != nil {
