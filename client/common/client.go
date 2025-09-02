@@ -65,14 +65,14 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		Numero:            os.Getenv("NUMERO"),
 		}
 		
-		msgStr := c.config.ID + "/" + apuesta.toString()
+		//msgStr := c.config.ID + "/" + apuesta.toString()
 		
-		if err := socket.Send(msgStr); err != nil {
+		if sentMsg, err := socket.Send(c.config.ID, apuesta); err != nil {
 	        log.Errorf("action: send_message | result: fail | error: %v", err)
 	        return
+        } else {
+            log.Infof("action: send_message | result: success | msg: %s", sentMsg)
         }
-
-		log.Infof("action: send_message | result: success | msg: %s", msgStr)
 		
 		response, err := socket.ReadResponse(ctx)
 		socket.Close()

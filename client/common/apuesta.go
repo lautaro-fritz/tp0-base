@@ -1,9 +1,5 @@
 package common
 
-import (
-
-)
-
 type Apuesta struct {
 	Nombre        string
 	Apellido      string

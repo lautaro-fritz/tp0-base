@@ -37,7 +37,7 @@ func (s *Socket) sendAll(data []byte) error {
 }
 
 
-func (s *Socket) Send(msg string) error {
+/*func (s *Socket) Send(msg string) error {
 	msgBytes := []byte(msg)
 	length := uint32(len(msgBytes))
 
@@ -51,6 +51,25 @@ func (s *Socket) Send(msg string) error {
 		return err
 	}
 	return nil
+}*/
+
+func (s *Socket) Send(agencyId string, apuesta Apuesta) (string, error) {
+    msgStr := agencyId + "/" + apuesta.toString()
+    
+	msgBytes := []byte(msgStr)
+	length := uint32(len(msgBytes))
+
+	lengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthBytes, length)
+
+	if err := s.sendAll(lengthBytes); err != nil {
+		return "", err
+	}
+	if err := s.sendAll(msgBytes); err != nil {
+		return "", err
+	}
+	
+	return msgStr, nil
 }
 
 func (s *Socket) ReadResponse(ctx context.Context) (string, error) {
