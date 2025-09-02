@@ -2,7 +2,7 @@ import logging
 import signal
 
 from .my_socket import Socket
-from .utils import Bet, store_bets
+from .utils import Bet, store_bets, load_bets, has_won
 
 class Server: 
 
@@ -91,18 +91,19 @@ class Server:
             if len(parts) == 2:
                 if parts[1] == "D":
                     logging.info(f'action: done_recibido | result: success')
-                    self.registered_agencies[parts[0] - 1] = True
+                    self.registered_agencies[int(parts[0]) - 1] = True
                     client_sock.send("OK")
                     
                 if parts[1] == "W":
-                    logging.info(f'action: done_recibido | result: success')
+                    logging.info(f'action: get_winners_recibido | result: success')
                     if self.registered_agencies.count(False) >= 1:
                         client_sock.send("ERROR")
+                        return
                         
-                    agency_winners = [winner for winner in self.winners if winner.agency == parts[0]]
+                    agency_winners = [winner for winner in self.winners if str(winner.agency) == parts[0]]
                     documents_str = "#".join(w.document for w in agency_winners)
-                    
                     client_sock.send(documents_str)
+                    return
                     
             
             if all(a is True for a in self.registered_agencies):

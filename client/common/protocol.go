@@ -29,7 +29,7 @@ func (p *Protocol) formatMessage(messageType MessageType) (string, error) {
 		    if err != nil {
 			    if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "EOF") {
 				    // No more records
-				    return sb.String(), nil
+				    return sb.String(), err
 			    }
 			    return "", fmt.Errorf("read_csv_row: %w", err)
 		    }

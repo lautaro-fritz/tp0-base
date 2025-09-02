@@ -193,6 +193,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 	    }
 
 	    trimmedResp := strings.TrimSpace(response)
+	    log.Infof("%v", trimmedResp)
 	    if trimmedResp == "ERROR" {
 		    log.Infof("action: get_winners | result: fail | response: %s", trimmedResp)
 		    time.Sleep(3 * time.Second)
