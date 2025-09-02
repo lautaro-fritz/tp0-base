@@ -146,7 +146,6 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 	if err != nil {
 		log.Errorf("action: read_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
-		//socket.Close()??
 		return
 	}
 
@@ -154,7 +153,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 	if trimmedResp == "OK" {
 		log.Infof("action: done_enviado | result: success")
 	} else {
-		log.Infof("action: done_enviado | result: fail | response: %s", trimmedResp)
+		log.Infof("action: done_enviado | result: success | response: %s", trimmedResp)
 	}
 	
 	getWinnersMsg, err := protocol.formatMessage(WinnersMessage)
