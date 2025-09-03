@@ -197,7 +197,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		    time.Sleep(3 * time.Second)
 	    } else {
 		    //winners := strings.Split(trimmedResp, "#")
-		    parts := strings.FieldsFunc(s, func(r rune) bool {
+		    winners := strings.FieldsFunc(s, func(r rune) bool {
 		        return r == '#'
 	        })
 		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
