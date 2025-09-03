@@ -196,7 +196,10 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		    log.Infof("action: get_winners | result: success | response: %s", trimmedResp)
 		    time.Sleep(3 * time.Second)
 	    } else {
-		    winners := strings.Split(trimmedResp, "#")
+		    //winners := strings.Split(trimmedResp, "#")
+		    parts := strings.FieldsFunc(s, func(r rune) bool {
+		        return r == '#'
+	        })
 		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
 		    break
 	    }
