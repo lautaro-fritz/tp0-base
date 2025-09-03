@@ -1,134 +1,142 @@
 import logging
 import signal
+import threading
 
 from .my_socket import Socket
 from .utils import Bet, store_bets, load_bets, has_won
 
-class Server: 
+
+class Server:
 
     def _graceful_exit_handler(self, signum, frame):
         logging.info(f"Signal {signum} received, shutting down gracefully.")
         self._is_running = False
         try:
             self._server_socket.close()
-            logging.info(f'action: server_socket_close | result: success')
+            logging.info('action: server_socket_close | result: success')
         except Exception as e:
             logging.error(f"Error closing server socket: {e}")
 
+        # Wait for all threads to finish
+        with self._threads_lock:
+            for thread in self._threads:
+                thread.join()
+        logging.info("All client threads have been joined. Server shutdown complete.")
+
     def __init__(self, port, listen_backlog, clients_amount):
-        # Initialize server socket
         self._server_socket = Socket()
         self._server_socket.bind_and_listen(port, listen_backlog)
+
         signal.signal(signal.SIGTERM, self._graceful_exit_handler)
-        self.registered_agencies = [False] * clients_amount
-        self.winners = []
         self._is_running = True
 
-    def run(self):
-        """
-        Dummy Server loop
+        self.registered_agencies = [False] * clients_amount
+        self.winners = []
 
-        Server that accept a new connections and establishes a
-        communication with a client. After client with communucation
-        finishes, servers starts to accept new connections again
-        """
+        # Concurrency management
+        self._threads = []
+        self._threads_lock = threading.Lock()
+        self._agencies_lock = threading.Lock()
+        self._bets_lock = threading.Lock()
+        self._winners_lock = threading.Lock()
+        self._winner_selected = False
+        self._winner_lock = threading.Lock()
+
+    def run(self):
         while self._is_running:
             client_sock = self.__accept_new_connection()
             if client_sock:
-                self.__handle_client_connection(client_sock)
-        
-        logging.info(f"Server shutdown complete.")
+                thread = threading.Thread(
+                    target=self.__handle_client_connection,
+                    args=(client_sock,)
+                )
+                thread.start()
+                with self._threads_lock:
+                    self._threads.append(thread)
 
     def __handle_client_connection(self, client_sock):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
         try:
             length = client_sock.recv_length()
             addr = client_sock.getpeername()
             logging.info(f'action: receive_length | result: success | ip: {addr[0]} | msg: {length}')
-            
+
             msg = client_sock.recv_msg(length)
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            
+
             parts = msg.split('#')
-            
             if len(parts) < 2:
                 logging.error(f'action: mensaje_recibido | result: fail | reason: no op code')
                 client_sock.send("ERROR")
                 return
-            
-            # solo puede haber mas de dos campos del mensaje si es el mensaje de apuestas
+
             if len(parts) > 2:
                 client_id = parts[0]
                 bets_raw = parts[2:]
-                
                 bets = []
+
                 for bet_str in bets_raw:
                     fields = bet_str.split('/')
                     if len(fields) != 5:
                         logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets_raw)} | reason: malformed_bet')
                         client_sock.send("ERROR")
                         return
-                    
+
                     bet = Bet(client_id, fields[0], fields[1], fields[2], fields[3], fields[4])
                     bets.append(bet)
-            
+
                 try:
-                    store_bets(bets)
+                    with self._bets_lock:
+                        store_bets(bets)
                 except Exception as e:
                     logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)} | error: {e}')
                     client_sock.send("ERROR")
                     return
-                
+
                 logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
                 client_sock.send("OK")
-            
-            # si solo hay dos campos del mensaje puede ser la notificacion de que termino o la consulta de ganadores    
-            if len(parts) == 2:
+
+            elif len(parts) == 2:
+                client_id = int(parts[0])
+
                 if parts[1] == "D":
                     logging.info(f'action: done_recibido | result: success')
-                    self.registered_agencies[int(parts[0]) - 1] = True
+                    with self._agencies_lock:
+                        self.registered_agencies[client_id - 1] = True
                     client_sock.send("OK")
-                    
-                if parts[1] == "W":
+
+                elif parts[1] == "W":
                     logging.info(f'action: get_winners_recibido | result: success')
-                    if self.registered_agencies.count(False) >= 1:
-                        client_sock.send("ERROR")
-                        return
+                    with self._agencies_lock:
+                        if self.registered_agencies.count(False) >= 1:
+                            client_sock.send("ERROR")
+                            return
+
+                    with self._winner_lock:
+                        if not self._winner_selected:
+                            with self._bets_lock:
+                                all_bets = load_bets()
+                            for bet in all_bets:
+                                if has_won(bet):
+                                    with self._winners_lock:
+                                        self.winners.append(bet)
+                            self._winner_selected = True
+                            logging.info("action: sorteo | result: success")
+
+                    # Send winners
+                    with self._winners_lock:
+                        agency_winners = [w for w in self.winners if w.agency == client_id]
+                        documents_str = "#".join(w.document for w in agency_winners)
+                        response = f"W#{documents_str}"
                         
-                    agency_winners = [winner for winner in self.winners if str(winner.agency) == parts[0]]
-                    documents_str = "#".join(w.document for w in agency_winners)
-                    msg_str = "W" + "#" + documents_str
-                    client_sock.send(msg_str)
+                    client_sock.send(response)
                     return
-                    
-            
-            if all(a is True for a in self.registered_agencies):
-                logging.info(f'action: sorteo | result: success')
-                bets = load_bets()
-                for bet in bets:
-                    if has_won(bet):
-                        self.winners.append(bet)
-                
-        
+
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
             client_sock.close()
 
     def __accept_new_connection(self):
-        """
-        Accept new connections
-
-        Function blocks until a connection to a client is made.
-        Then connection created is printed and returned
-        """
-
-        # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         try:
             client_socket, addr = self._server_socket.accept()
@@ -137,3 +145,4 @@ class Server:
         except OSError as e:
             logging.debug(f'Server socket closed or error accepting connection: {e}')
             return None
+
