@@ -107,7 +107,7 @@ Modificar el cliente y el servidor para lograr que realizar cambios en el archiv
 
 #### Solución
 
-Se modificó el script `generador.py` para incluir la configuración de volúmenes de tipo `bind mount` tanto en el contenedor del servidor como en los contenedores cliente. Esto permite inyectar archivos de configuración (`config.ini` para el servidor y `config.yaml` para los clientes) directamente desde el sistema host, sin necesidad de reconstruir las imágenes de Docker cuando estos archivos cambian.
+Se modificó el script `generador.py` para incluir la configuración de volúmenes de tipo `bind mount` tanto en el contenedor del servidor como en los contenedores cliente. Esto permite inyectar archivos de configuración (`config.ini` para el servidor y `config.yaml` para los clientes) directamente desde el sistema _host_, sin necesidad de reconstruir las imágenes de Docker cuando estos archivos cambian.
 
 Los volúmenes se definieron de la siguiente manera:
 
