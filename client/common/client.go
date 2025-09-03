@@ -200,7 +200,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		    winners := strings.FieldsFunc(s, func(r rune) bool {
 		        return r == '#'
 	        })
-		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
+		    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners) - 1)
 		    break
 	    }
 	}

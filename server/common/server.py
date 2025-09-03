@@ -102,6 +102,7 @@ class Server:
                         
                     agency_winners = [winner for winner in self.winners if str(winner.agency) == parts[0]]
                     documents_str = "#".join(w.document for w in agency_winners)
+                    msg_str = "W" + "#" + documents_str
                     client_sock.send(documents_str)
                     return
                     
