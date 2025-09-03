@@ -101,8 +101,31 @@ El archivo de salida contiene las definiciones de un contenedor servidor, N cont
 
 El script de Bash se ejecuta con el comando `./generar-compose.sh <archivo de salida> <cantidad de clientes>`
 
+
 ### Ejercicio N°2:
 Modificar el cliente y el servidor para lograr que realizar cambios en el archivo de configuración no requiera reconstruír las imágenes de Docker para que los mismos sean efectivos. La configuración a través del archivo correspondiente (`config.ini` y `config.yaml`, dependiendo de la aplicación) debe ser inyectada en el container y persistida por fuera de la imagen (hint: `docker volumes`).
+
+#### Solución
+
+Se modificó el script `generador.py` para incluir la configuración de volúmenes de tipo `bind mount` tanto en el contenedor del servidor como en los contenedores cliente. Esto permite inyectar archivos de configuración (`config.ini` para el servidor y `config.yaml` para los clientes) directamente desde el sistema host, sin necesidad de reconstruir las imágenes de Docker cuando estos archivos cambian.
+
+Los volúmenes se definieron de la siguiente manera:
+
+Para el servidor:
+```
+    volumes:
+      - type: bind
+        source: ./server/config.ini
+        target: /config.ini
+```
+
+Para los clientes:
+```
+    volumes:
+      - type: bind
+        source: ./client/config.yaml
+        target: /config.yaml
+```
 
 
 ### Ejercicio N°3:
