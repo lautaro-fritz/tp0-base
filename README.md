@@ -101,6 +101,7 @@ El archivo de salida contiene las definiciones de un contenedor servidor, N cont
 
 El script de Bash se ejecuta con el comando `./generar-compose.sh <archivo de salida> <cantidad de clientes>`
 
+
 ### Ejercicio N°2:
 Modificar el cliente y el servidor para lograr que realizar cambios en el archivo de configuración no requiera reconstruír las imágenes de Docker para que los mismos sean efectivos. La configuración a través del archivo correspondiente (`config.ini` y `config.yaml`, dependiendo de la aplicación) debe ser inyectada en el container y persistida por fuera de la imagen (hint: `docker volumes`).
 
@@ -134,6 +135,21 @@ En caso de que la validación sea exitosa imprimir: `action: test_echo_server | 
 
 El script deberá ubicarse en la raíz del proyecto. Netcat no debe ser instalado en la máquina _host_ y no se pueden exponer puertos del servidor para realizar la comunicación (hint: `docker network`). `
 
+#### Solución
+
+Se desarrolló un script de Bash llamado `validar-echo-server.sh` que permite verificar el correcto funcionamiento del servidor tipo _echo_. Para ello, se utiliza una imagen liviana de `busybox` con el comando `netcat` (`nc`) preinstalado para enviar un mensaje al servidor y comprobar si se recibe exactamente el mismo mensaje como respuesta.
+
+El script:
+
+- No requiere instalar `netcat` en la máquina _host_.
+
+- No expone puertos del servidor hacia el exterior.
+
+- Utiliza la red interna de Docker (`tp0_testing_net`) para comunicarse directamente con el contenedor del servidor.
+
+El uso de `docker run --rm --network <net>` garantiza que el contenedor de prueba se elimine automáticamente al finalizar, y que esté correctamente conectado a la red interna para comunicarse con el servidor por nombre de _host_.
+
+El script de Bash se ejecuta con el comando `./validar-echo-server.sh`.
 
 ### Ejercicio N°4:
 Modificar servidor y cliente para que ambos sistemas terminen de forma _graceful_ al recibir la signal SIGTERM. Terminar la aplicación de forma _graceful_ implica que todos los _file descriptors_ (entre los que se encuentran archivos, sockets, threads y procesos) deben cerrarse correctamente antes que el thread de la aplicación principal muera. Loguear mensajes en el cierre de cada recurso (hint: Verificar que hace el flag `-t` utilizado en el comando `docker compose down`).
