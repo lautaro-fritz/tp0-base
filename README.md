@@ -256,6 +256,50 @@ Las funciones `load_bets(...)` y `has_won(...)` son provistas por la cátedra y 
 
 No es correcto realizar un broadcast de todos los ganadores hacia todas las agencias, se espera que se informen los DNIs ganadores que correspondan a cada una de ellas.
 
+#### Solución
+
+##### Cambios en la estructura
+
+En el cliente, se cambió el nombre del tio Batch a Protocol, ya que este nombre parecía más indicado dado que ahora se debe poder enviar más de un tipo de mensaje. También se agregó un tipo MessageType para permitir distinguir entre los mismos.
+El tipo Client invoca a Protocol con alguno de los MessageTypes, y en base a él, devuelve cuál es el mensaje a enviar por el socket.
+
+En el servidor se implementaron modificaciones para poder contestar a los diferentes tipos de mensajes de forma adecuada.
+
+##### Cambios en el protocolo
+
+Ahora los clientes pueden realizar acciones más allá de registrar apuestas, por lo que se sumó al protocolo un caracter para distinguir el tipo de operación a ejecutar. De esta forma, los mensajes quedan de la siguiente forma:
+
+```
+<id_de_agencia>#<código_de_operación>#[payload]
+```
+Donde el código de operación puede ser:
+
+* `B` para registrar una apuesta
+* `D` para marcar que la agencia ya envió todas las apuestas
+* `W` para consultar por la lista de ganadores
+
+El _payload_ es opcional, y sólo se envía en caso de que la operación sea de tipo `B`. En ese caso, el _payload_ es idéntico al detallado en el ejercicio 6.
+
+El servidor puede responder con los siguientes mensajes ante la llegada de un mensaje del cliente:
+
+* Mensaje tipo B: `OK` o `ERROR`
+* Mensaje tipo D: `OK` o `ERROR`
+* Mensaje tipo W: `W#[lista_de_ganadores]` o `ERROR`
+
+La lista de ganadores es opcional, en caso de que haya habido uno o más ganadores del sorteo. Así, para un sorteo con N ganadores, la respuesta sería:
+
+```
+W#<dni_ganador_1>#...#<dni_ganador_N>
+```
+
+A todos los mensajes se les concatena al final el caracter `\n` para indicar el fin del mismo.
+
+##### Notas
+
+* Cuando los clientes consultan por los ganadores del sorteo, y este todavía no ha sido realizado, estos quedarán esperando 3 segundos y luego volverán a consultar. No es el mejor diseño pero no tenía tiempo para cambiarlo.
+
+* Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
+
 ## Parte 3: Repaso de Concurrencia
 En este ejercicio es importante considerar los mecanismos de sincronización a utilizar para el correcto funcionamiento de la persistencia.
 
