@@ -167,6 +167,23 @@ En este ejercicio es importante considerar los mecanismos de sincronización a u
 
 Modificar el servidor para que permita aceptar conexiones y procesar mensajes en paralelo. En caso de que el alumno implemente el servidor en Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
+##### Solución
+
+Ahora el servidor debe tener la capacidad de procesar las solicitudes de múltiples clientes de forma concurrente, por lo que se emplea el módulo `threading` de la biblioteca estándar de Python para delegar el procesamiento de las solicitudes de cada cliente en un _thread_, mientras que el hilo principal de la aplicación queda a la escucha de nuevas conexiones.
+
+Hay un _lock_ por cada recurso compartido, de forma tal que cada vez que un hilo quiera tomar alguno de ellos, primero debe tomar el _lock_. Esto se hace para evitar _race conditions_.
+
+Python tiene la particularidad de contar con el Global Interpreter Lock (GIL) que puede limitar severamente el impacto positivo de disparar _threads_ para la ejecución concurrente de operaciones. Sin embargo, en este caso se decidió avanzar con este modelo porque el servidor no hace un uso intensivo de CPU, sino que está mayormente limitado por operaciones de entrada/salida, como puede ser el envío y recepción de datos a través de un socket.  
+Según la documentación de Python, estas operaciones ocurren por fuera del GIL, por lo que este no sería un impedimento para utilizar este módulo.
+
+> In CPython, due to the Global Interpreter Lock, only one thread can execute Python code at once [...] However, threading is still an appropriate model if you want to run multiple I/O-bound tasks simultaneously.
+
+Fuente: https://docs.python.org/3/library/threading.html#introduction
+
+> The GIL is not ideal, since it prevents multithreaded CPython programs from taking full advantage of multiprocessor systems in certain situations. Luckily, many potentially blocking or long-running operations, such as I/O [...] happen outside the GIL.
+
+Fuente: https://wiki.python.org/moin/GlobalInterpreterLock
+
 ## Condiciones de Entrega
 Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios y que aprovechen el esqueleto provisto tanto (o tan poco) como consideren necesario.
 
