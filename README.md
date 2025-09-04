@@ -175,8 +175,6 @@ Emulará a una _agencia de quiniela_ que participa del proyecto. Existen 5 agenc
 
 Los campos deben enviarse al servidor para dejar registro de la apuesta. Al recibir la confirmación del servidor se debe imprimir por log: `action: apuesta_enviada | result: success | dni: ${DNI} | numero: ${NUMERO}`.
 
-
-
 #### Servidor
 Emulará a la _central de Lotería Nacional_. Deberá recibir los campos de la cada apuesta desde los clientes y almacenar la información mediante la función `store_bet(...)` para control futuro de ganadores. La función `store_bet(...)` es provista por la cátedra y no podrá ser modificada por el alumno.
 Al persistir se debe imprimir por log: `action: apuesta_almacenada | result: success | dni: ${DNI} | numero: ${NUMERO}`.
@@ -188,6 +186,29 @@ Se deberá implementar un módulo de comunicación entre el cliente y el servido
 * Correcta separación de responsabilidades entre modelo de dominio y capa de comunicación.
 * Correcto empleo de sockets, incluyendo manejo de errores y evitando los fenómenos conocidos como [_short read y short write_](https://cs61.seas.harvard.edu/site/2018/FileDescriptors/).
 
+#### Solución
+
+##### Cambios en la estructura original
+
+A partir de este ejercicio se abstraen las funcionalidades de los sockets en un tipo o clase llamado Socket. Esto permite implementar métodos propios de recepción y envío de mensajes, sobre todo para evitar _short reads_ y _short writes_.  
+En el cliente también se incluye un tipo Apuesta que almacena la información relacionada a las apuestas.
+
+##### Protocolo de comunicación
+
+El cliente envía dos mensajes seguidos: primero la longitud en bytes del mensaje a enviar como un entero, y luego, el mensaje propiamente dicho. El mensaje tiene el siguiente formato:
+
+```
+<id_de_agencia>/<apuesta.nombre>/<apuesta.apellido>/<apuesta.documento>/<apuesta.nacimiento>/<apuesta.numero>
+```
+donde los campos del 2 al 6 están almacenados en una variable de tipo Apuesta.
+
+Por la simpleza del protocolo de comunicación, este está a cargo del Socket. Esto cambia en ejercicios posteriores.
+
+Del lado del servidor hay sólo dos respuestas posibles: OK si salió todo bien y ERROR si hubo algún error. A estos mensajes se les concatena un caracter \n para su envío por la red, para que los clientes sepan que allí terminó el mensaje.
+
+##### Short reads y short writes
+
+Una cuestión interesante es cómo evitar los _short reads_ y _short writes_. Para esto, el Socket implementa sus propios métodos de envío y recepción, donde los métodos `send()` y `recv()` están dentro de un bucle para escribir o leer exactamente la cantidad de bytes que sea necesaria (a excepción del envío por parte del Socket del servidor que ya tiene un [método dedicado en la librería estándar](https://docs.python.org/3/library/socket.html#socket.socket.sendall)).
 
 ### Ejercicio N°6:
 Modificar los clientes para que envíen varias apuestas a la vez (modalidad conocida como procesamiento por _chunks_ o _batchs_). 
