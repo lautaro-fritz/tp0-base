@@ -223,6 +223,26 @@ La cantidad máxima de apuestas dentro de cada _batch_ debe ser configurable des
 
 Por su parte, el servidor deberá responder con éxito solamente si todas las apuestas del _batch_ fueron procesadas correctamente.
 
+#### Solución
+
+##### Cambios en la estructura
+
+En el cliente, como la lógica de envío es un poco más complicada, se delega la generación de _batches_ en un tipo Batch. Este recorre el archivo y va armando el _batch_ hasta que llega a la cantidad máxima de apuestas posibles para el mismo o bien el mensaje a enviar por hacia el servidor (que va armando mientras tanto) excede la capacidad máxima de 8kB.
+
+##### Cambios en el protocolo
+
+Debido a que ahora pueden enviarse múltiples apuestas, se suma la necesidad de delimitar las distintas apuestas en el mensaje. Es por esto que se sumó otro caracter (#) para distinguir cuando termina una y comienza otra. El nuevo formato de los mensajes es el siguiente:
+
+```
+<id_de_agencia>#<apuesta1.nombre>/<apuesta1.apellido>/<apuesta1.documento>/<apuesta1.nacimiento>/<apuesta1.numero>#...#<apuestaN.nombre>/<apuestaN.apellido>/<apuestaN.documento>/<apuestaN.nacimiento>/<apuestaN.numero>
+```
+
+El servidor sigue teniendo dos respuestas posibles: OK o ERROR, terminados con \n para su envío.
+
+##### Nota
+
+Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
+
 ### Ejercicio N°7:
 
 Modificar los clientes para que notifiquen al servidor al finalizar con el envío de todas las apuestas y así proceder con el sorteo.
