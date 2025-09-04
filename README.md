@@ -184,6 +184,9 @@ Fuente: https://docs.python.org/3/library/threading.html#introduction
 
 Fuente: https://wiki.python.org/moin/GlobalInterpreterLock
 
+##### Nota
+Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
+
 ## Condiciones de Entrega
 Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios y que aprovechen el esqueleto provisto tanto (o tan poco) como consideren necesario.
 
