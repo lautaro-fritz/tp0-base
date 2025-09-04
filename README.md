@@ -210,6 +210,10 @@ Del lado del servidor hay sólo dos respuestas posibles: OK si salió todo bien 
 
 Una cuestión interesante es cómo evitar los _short reads_ y _short writes_. Para esto, el Socket implementa sus propios métodos de envío y recepción, donde los métodos `send()` y `recv()` están dentro de un bucle para escribir o leer exactamente la cantidad de bytes que sea necesaria (a excepción del envío por parte del Socket del servidor que ya tiene un [método dedicado en la librería estándar](https://docs.python.org/3/library/socket.html#socket.socket.sendall)).
 
+##### Nota
+
+* Se asume que los registros de apuestas no incluirán el caracter `/`.
+
 ### Ejercicio N°6:
 Modificar los clientes para que envíen varias apuestas a la vez (modalidad conocida como procesamiento por _chunks_ o _batchs_). 
 Los _batchs_ permiten que el cliente registre varias apuestas en una misma consulta, acortando tiempos de transmisión y procesamiento.
@@ -239,9 +243,11 @@ Debido a que ahora pueden enviarse múltiples apuestas, se suma la necesidad de 
 
 El servidor sigue teniendo dos respuestas posibles: OK o ERROR, terminados con \n para su envío.
 
-##### Nota
+##### Notas
 
-Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
+* Se asume que los registros de apuestas no incluirán los caracteres `/` y `#`.
+
+* Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
 
 ### Ejercicio N°7:
 
@@ -298,6 +304,10 @@ A todos los mensajes se les concatena al final el caracter `\n` para indicar el 
 
 * Cuando los clientes consultan por los ganadores del sorteo, y este todavía no ha sido realizado, estos quedarán esperando 3 segundos y luego volverán a consultar. No es el mejor diseño pero no tenía tiempo para cambiarlo.
 
+* De la misma forma, no está bueno que el protocolo del lado del cliente indique la cantidad de bytes a enviar primero y del lado del servidor no se use esto, sino que se utilice el caracter `\n` para indicar el fin de los mensajes. Lo ideal sería que ambos emplearan el mismo criterio. Esto sucedió porque tomé la implementación que ya estaba y no tuve tiempo de modificarlo.
+
+* Se asume que los registros de apuestas no incluirán los caracteres `/` y `#`.
+
 * Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
 
 ## Parte 3: Repaso de Concurrencia
@@ -324,8 +334,11 @@ Fuente: https://docs.python.org/3/library/threading.html#introduction
 
 Fuente: https://wiki.python.org/moin/GlobalInterpreterLock
 
-##### Nota
-Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
+##### Notas
+
+* En la parte del ejercicio en la que se realiza el sorteo, hay varios _locks_, uno por cada recurso compartido que interviene en la realización del sorteo, que se toman anidados, uno después del otro. Eso no tendría que ser así, ya que la sección crítica (la realización del sorteo) es sólo una, y tendría que haber un único _lock_ para ella.
+
+* Es posible que el primer test falle si el contenedor del cliente se levanta antes que el del servidor.
 
 ## Condiciones de Entrega
 Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios y que aprovechen el esqueleto provisto tanto (o tan poco) como consideren necesario.
