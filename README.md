@@ -154,6 +154,15 @@ El script de Bash se ejecuta con el comando `./validar-echo-server.sh`.
 ### Ejercicio N°4:
 Modificar servidor y cliente para que ambos sistemas terminen de forma _graceful_ al recibir la signal SIGTERM. Terminar la aplicación de forma _graceful_ implica que todos los _file descriptors_ (entre los que se encuentran archivos, sockets, threads y procesos) deben cerrarse correctamente antes que el thread de la aplicación principal muera. Loguear mensajes en el cierre de cada recurso (hint: Verificar que hace el flag `-t` utilizado en el comando `docker compose down`).
 
+#### Solución
+En los clientes, por las características propias de Golang, se emplea una _goroutine_ que corre aparte del hilo principal y está siempre escuchando por la llegada de _signals_. Al llegar una _signal_ de tipo SIGTERM, esta notifica al hilo principal mediante un canal.  
+El hilo principal, por su parte, tiene sus operaciones dentro de un bucle. Al principio de cada iteración, confirma que no haya notificaciones de signals en el canal. Si no hay, procede con la ejecución. De esta forma, si la _signal_ fuera enviada durante el envío o recepción de datos a través del socket, no se corta la comunicación inmediatamente, y se permite que se completen estas operaciones antes de salir.  
+El socket se cierra siempre luego de la recepción de un mensaje, haya llegado o no una _signal_.
+
+El servidor funciona de forma similar: al llegar una _signal_ de tipo SIGTERM, se indica el fin de ejecución del programa, y se cierra el socket que escucha por nuevas conexiones. Luego, se continúa con la ejecución del programa, permitiendo que las operaciones que se estuvieran ejecutando (por ejemplo, el envío y recepción de un mensaje a través del socket para la comunicación) finalicen antes de salir.  
+Nuevamente, el socket del cliente se cierra al finalizar cada iteración del hilo principal.
+
+
 ## Parte 2: Repaso de Comunicaciones
 
 Las secciones de repaso del trabajo práctico plantean un caso de uso denominado **Lotería Nacional**. Para la resolución de las mismas deberá utilizarse como base el código fuente provisto en la primera parte, con las modificaciones agregadas en el ejercicio 4.
